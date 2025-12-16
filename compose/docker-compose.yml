@@ -12,6 +12,9 @@ services:
     environment:
       # By default, docker-gc is run every night at midnight. Change this variable to override.
       - CRON="0 */4 * * *"
+      
+      # Run garbage collection immediately on container startup (in addition to scheduled runs)
+      # - RUN_ON_STARTUP=1
 
       # By default, docker will not remove an image if it is tagged in multiple repositories. If
       # you have a server running docker where this is the case, for example in CI environments 
@@ -38,3 +41,8 @@ services:
       # If you don't like all your log output and cron times being in UTC, you can set the
       # TZ variable to override the default.
       - TZ=America/New_York
+
+      # Webhook notifications (optional)
+      # Set WEBHOOK_URL to enable notifications for GC events (started, finished, failed, image_deleted, container_deleted)
+      # - WEBHOOK_URL=https://your-webhook-endpoint.com/notify
+      # - WEBHOOK_TIMEOUT=10
