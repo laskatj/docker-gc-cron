@@ -47,4 +47,13 @@ if [ "$VOLUME_DELETE_ONLY_DRIVER" ]; then
    GC_ARGS="$GC_ARGS VOLUME_DELETE_ONLY_DRIVER=$VOLUME_DELETE_ONLY_DRIVER"
 fi
 
+# Also pass CLEAN_UP_VOLUMES to executed-by-cron.sh if set
+if [ "$CLEAN_UP_VOLUMES" ]; then
+   GC_ARGS="$GC_ARGS CLEAN_UP_VOLUMES=$CLEAN_UP_VOLUMES"
+fi
+
+# Note: WEBHOOK_URL and WEBHOOK_TIMEOUT are read from environment by send-webhook.sh
+# They should be available since they're set as container environment variables
+# If cron doesn't inherit them, we can add them here, but typically they should be available
+
 echo -e "$CRON" "$GC_ARGS sh /executed-by-cron.sh" '>> /var/log/cron.log 2>&1'"\n" > crontab.tmp
