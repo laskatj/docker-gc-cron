@@ -24,7 +24,9 @@ services:
       # By default, if an error is encountered when cleaning up a container, Docker will report the
       # error back and leave it on disk. This can sometimes lead to containers accumulating. If
       # you run into this issue, you can force the removal of the container by setting this flag.
-      - FORCE_CONTAINER_REMOVAL=1
+      # NOTE: This is disabled because EXCLUDE_CONTAINERS='*' is set in executed-by-cron.sh to
+      # prevent all container deletion. Only images are cleaned up.
+      # - FORCE_CONTAINER_REMOVAL=1
 
       # By default, docker-gc will not remove a container if it exited less than 1 hour ago.
       # Set the GRACE_PERIOD_SECONDS variable to override this default.

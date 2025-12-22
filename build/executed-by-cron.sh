@@ -88,10 +88,31 @@ fi
 # Clean up temp files
 rm -f "$STOPPED_CONTAINERS_TEMP" "$EXISTING_EXCLUDES"
 
-# Exclude all containers from deletion - only clean up images
-# This prevents docker-gc from deleting any containers (running or stopped)
-export EXCLUDE_CONTAINERS='*'
-echo "[$(date)] Container deletion disabled (EXCLUDE_CONTAINERS=*). Only images will be cleaned." >> /var/log/cron.log 2>&1
+# Handle container exclusion based on FORCE_CONTAINER_REMOVAL setting
+# If FORCE_CONTAINER_REMOVAL is 1, allow container deletion (don't exclude)
+# Otherwise, exclude all containers to prevent deletion
+EXCLUDE_CONTAINERS_FILE="/etc/docker-gc-exclude-containers"
+FORCE_CONTAINER_REMOVAL=${FORCE_CONTAINER_REMOVAL:-0}
+
+if [ "$FORCE_CONTAINER_REMOVAL" != "1" ]; then
+  # Exclude all containers from deletion - only clean up images
+  # docker-gc uses a file at /etc/docker-gc-exclude-containers to exclude containers
+  # We need to populate this file with all container names/IDs to exclude everything
+  echo "[$(date)] FORCE_CONTAINER_REMOVAL is not set to 1. Populating container exclude file to prevent all container deletion..." >> /var/log/cron.log 2>&1
+  
+  # Get all container names and IDs (running and stopped) and write to exclude file
+  docker ps -a --format "{{.Names}}" 2>/dev/null | grep -v '^$' > "$EXCLUDE_CONTAINERS_FILE" || touch "$EXCLUDE_CONTAINERS_FILE"
+  # Also add container IDs to be safe (docker-gc might match by ID)
+  docker ps -a --format "{{.ID}}" 2>/dev/null | grep -v '^$' >> "$EXCLUDE_CONTAINERS_FILE" || true
+  
+  CONTAINER_COUNT=$(wc -l < "$EXCLUDE_CONTAINERS_FILE" 2>/dev/null | tr -d ' ' || echo "0")
+  echo "[$(date)] Added ${CONTAINER_COUNT} container(s) to exclude file. Only images will be cleaned." >> /var/log/cron.log 2>&1
+else
+  # FORCE_CONTAINER_REMOVAL=1, so allow container deletion
+  # Clear or remove the exclude file to allow docker-gc to delete containers
+  echo "[$(date)] FORCE_CONTAINER_REMOVAL=1 detected. Containers may be deleted according to docker-gc rules." >> /var/log/cron.log 2>&1
+  > "$EXCLUDE_CONTAINERS_FILE" 2>/dev/null || rm -f "$EXCLUDE_CONTAINERS_FILE"
+fi
 
 # Capture docker-gc output to parse for deletions
 GC_OUTPUT=$(/usr/bin/docker-gc 2>&1)
